@@ -1,0 +1,8 @@
+.idea
+bin
+
+.env
+config.json
+
+.fleet
+.vscode
