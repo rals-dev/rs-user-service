@@ -24,11 +24,14 @@ type LoginResponse struct {
 type RegisterRequest struct {
 	Name            string `json:"name" validate:"required"`
 	Username        string `json:"username" validate:"required"`
-	Password        string `json:"password" validate:"required"`
-	ConfirmPassword string `json:"confirmPassword" validate:"required"`
+	Password        string `json:"password" validate:"required,min=8"`
+	ConfirmPassword string `json:"confirmPassword" validate:"required,eqfield=Password"`
 	Email           string `json:"email" validate:"required,email"`
 	PhoneNumber     string `json:"phoneNumber" validate:"required"`
-	RoleID          uint
+	// RoleID is never bound from client input (see json:"-"); it is only set
+	// internally by the service, which always forces new registrations to the
+	// customer role.
+	RoleID uint `json:"-"`
 }
 
 type RegisterResponse struct {
@@ -36,11 +39,10 @@ type RegisterResponse struct {
 }
 
 type UpdateRequest struct {
-	Name            string `json:"name" validate:"required"`
-	Username        string `json:"username" validate:"required"`
-	Password        *string `json:"password,omitempty"`
-	ConfirmPassword *string `json:"confirmPassword,omitempty"`
-	Email           string `json:"email" validate:"required,email"`
-	PhoneNumber     string `json:"phoneNumber" validate:"required"`
-	RoleID          uint
+	Name            string  `json:"name" validate:"required"`
+	Username        string  `json:"username" validate:"required"`
+	Password        *string `json:"password,omitempty" validate:"omitempty,min=8"`
+	ConfirmPassword *string `json:"confirmPassword,omitempty" validate:"omitempty,required_with=Password"`
+	Email           string  `json:"email" validate:"required,email"`
+	PhoneNumber     string  `json:"phoneNumber" validate:"required"`
 }

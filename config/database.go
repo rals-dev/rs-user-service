@@ -11,18 +11,25 @@ import (
 )
 
 func InitDatabase() (*gorm.DB, error) {
-	config := Config
-	encodedPassword := url.QueryEscape(config.Database.Password)
+	cfg := Config
+	encodedPassword := url.QueryEscape(cfg.Database.Password)
 	uri := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=disable",
-		config.Database.Username,
+		cfg.Database.Username,
 		encodedPassword,
-		config.Database.Host,
-		config.Database.Port,
-		config.Database.Name,
+		cfg.Database.Host,
+		cfg.Database.Port,
+		cfg.Database.Name,
 	)
 
+	// Only log full SQL statements (which may include sensitive data such as
+	// password hashes) outside of production; production gets warnings/errors only.
+	logLevel := logger.Warn
+	if cfg.AppEnv != ProductionEnv {
+		logLevel = logger.Info
+	}
+
 	db, err := gorm.Open(postgres.Open(uri), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logLevel),
 	})
 	if err != nil {
 		return nil, err
@@ -31,9 +38,9 @@ func InitDatabase() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	sqlDB.SetMaxIdleConns(config.Database.MaxIdleConnection)
-	sqlDB.SetMaxOpenConns(config.Database.MaxOpenConnection)
-	sqlDB.SetConnMaxLifetime(time.Duration(config.Database.MaxLifetimeConnection) * time.Second)
-	sqlDB.SetConnMaxIdleTime(time.Duration(config.Database.MaxIdleTime) * time.Second)
+	sqlDB.SetMaxIdleConns(cfg.Database.MaxIdleConnection)
+	sqlDB.SetMaxOpenConns(cfg.Database.MaxOpenConnection)
+	sqlDB.SetConnMaxLifetime(time.Duration(cfg.Database.MaxLifetimeConnection) * time.Second)
+	sqlDB.SetConnMaxIdleTime(time.Duration(cfg.Database.MaxIdleTime) * time.Second)
 	return db, nil
 }

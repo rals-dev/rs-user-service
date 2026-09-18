@@ -8,6 +8,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"net/http"
+	"os"
 	"time"
 	"user-service/common/response"
 	"user-service/config"
@@ -31,7 +32,11 @@ var command = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		loc, err := time.LoadLocation("Asia/Jakarta")
+		timezone := os.Getenv("TIMEZONE")
+		if timezone == "" {
+			timezone = "Asia/Jakarta"
+		}
+		loc, err := time.LoadLocation(timezone)
 
 		if err != nil {
 			panic(err)
@@ -52,8 +57,22 @@ var command = &cobra.Command{
 
 		controller := controllers.NewControllerRegistry(service)
 
-		router := gin.Default()
+		// gin.New() (instead of gin.Default()) avoids registering gin's built-in
+		// Recovery() middleware on top of middlewares.HandlePanic(), which
+		// already recovers panics and would otherwise never be reached.
+		router := gin.New()
+		router.Use(gin.Logger())
 		router.Use(middlewares.HandlePanic())
+
+		router.Use(middlewares.CORS(config.Config.AllowedOrigins))
+
+		lmt := tollbooth.NewLimiter(
+			config.Config.RateLimiterMaxRequest,
+			&limiter.ExpirableOptions{
+				DefaultExpirationTTL: time.Duration(config.Config.RateLimiterTimeSecond) * time.Second,
+			},
+		)
+		router.Use(middlewares.RateLimiter(lmt))
 
 		router.NoRoute(func(c *gin.Context) {
 			c.JSON(http.StatusNotFound, response.Response{
@@ -67,25 +86,6 @@ var command = &cobra.Command{
 				Message: "Welcome to User Service",
 			})
 		})
-
-		router.Use(func(context *gin.Context) {
-			context.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-			context.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH")
-			context.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-service-name, x-apikey, x-request-at")
-			if context.Request.Method == "OPTIONS" {
-				context.AbortWithStatus(204)
-				return
-			}
-			context.Next()
-		})
-
-		lmt := tollbooth.NewLimiter(
-			config.Config.RateLimiterMaxRequest,
-			&limiter.ExpirableOptions{
-				DefaultExpirationTTL: time.Duration(config.Config.RateLimiterTimeSecond) * time.Second,
-			},
-		)
-		router.Use(middlewares.RateLimiter(lmt))
 
 		group := router.Group("/api/v1")
 		route := routes.NewRouteRegistry(controller, group)

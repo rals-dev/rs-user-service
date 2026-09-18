@@ -26,15 +26,19 @@ func NewUserController(service services.IServiceRegistry) IUserController {
 	return &UserController{service: service}
 }
 
+const invalidRequestBodyMessage = "invalid request body"
+
 func (u *UserController) Login(context *gin.Context) {
 	request := &dto.LoginRequest{}
 
 	err := context.ShouldBindJSON(request)
 	if err != nil {
+		message := invalidRequestBodyMessage
 		response.HttpResponse(response.ParamHTTPResp{
-			Code: http.StatusBadRequest,
-			Err:  err,
-			Gin:  context,
+			Code:    http.StatusBadRequest,
+			Message: &message,
+			Err:     err,
+			Gin:     context,
 		})
 		return
 	}
@@ -55,7 +59,7 @@ func (u *UserController) Login(context *gin.Context) {
 	user, err := u.service.GetUser().Login(context, request)
 	if err != nil {
 		response.HttpResponse(response.ParamHTTPResp{
-			Code: http.StatusBadRequest,
+			Code: errWrap.HTTPStatus(err),
 			Err:  err,
 			Gin:  context,
 		})
@@ -74,10 +78,12 @@ func (u *UserController) Register(context *gin.Context) {
 
 	err := context.ShouldBindJSON(request)
 	if err != nil {
+		message := invalidRequestBodyMessage
 		response.HttpResponse(response.ParamHTTPResp{
-			Code: http.StatusBadRequest,
-			Err:  err,
-			Gin:  context,
+			Code:    http.StatusBadRequest,
+			Message: &message,
+			Err:     err,
+			Gin:     context,
 		})
 		return
 	}
@@ -98,7 +104,7 @@ func (u *UserController) Register(context *gin.Context) {
 	user, err := u.service.GetUser().Register(context, request)
 	if err != nil {
 		response.HttpResponse(response.ParamHTTPResp{
-			Code: http.StatusBadRequest,
+			Code: errWrap.HTTPStatus(err),
 			Err:  err,
 			Gin:  context,
 		})
@@ -117,10 +123,12 @@ func (u *UserController) Update(context *gin.Context) {
 
 	err := context.ShouldBindJSON(request)
 	if err != nil {
+		message := invalidRequestBodyMessage
 		response.HttpResponse(response.ParamHTTPResp{
-			Code: http.StatusBadRequest,
-			Err:  err,
-			Gin:  context,
+			Code:    http.StatusBadRequest,
+			Message: &message,
+			Err:     err,
+			Gin:     context,
 		})
 		return
 	}
@@ -141,7 +149,7 @@ func (u *UserController) Update(context *gin.Context) {
 	user, err := u.service.GetUser().Update(context, request, uuid)
 	if err != nil {
 		response.HttpResponse(response.ParamHTTPResp{
-			Code: http.StatusBadRequest,
+			Code: errWrap.HTTPStatus(err),
 			Err:  err,
 			Gin:  context,
 		})
@@ -155,10 +163,10 @@ func (u *UserController) Update(context *gin.Context) {
 }
 
 func (u *UserController) GetUserLogin(context *gin.Context) {
-	user,err:=u.service.GetUser().GetUserLogin(context.Request.Context())
+	user, err := u.service.GetUser().GetUserLogin(context.Request.Context())
 	if err != nil {
 		response.HttpResponse(response.ParamHTTPResp{
-			Code: http.StatusBadRequest,
+			Code: errWrap.HTTPStatus(err),
 			Err:  err,
 			Gin:  context,
 		})
@@ -166,17 +174,17 @@ func (u *UserController) GetUserLogin(context *gin.Context) {
 	}
 
 	response.HttpResponse(response.ParamHTTPResp{
-		Code:http.StatusOK,
+		Code: http.StatusOK,
 		Data: user,
-		Gin: context,
+		Gin:  context,
 	})
 }
 
 func (u *UserController) GetUserByUUID(context *gin.Context) {
-	user,err:=u.service.GetUser().GetUserByUUID(context.Request.Context(),context.Param("uuid"))
+	user, err := u.service.GetUser().GetUserByUUID(context.Request.Context(), context.Param("uuid"))
 	if err != nil {
 		response.HttpResponse(response.ParamHTTPResp{
-			Code: http.StatusBadRequest,
+			Code: errWrap.HTTPStatus(err),
 			Err:  err,
 			Gin:  context,
 		})
@@ -184,8 +192,8 @@ func (u *UserController) GetUserByUUID(context *gin.Context) {
 	}
 
 	response.HttpResponse(response.ParamHTTPResp{
-		Code:http.StatusOK,
+		Code: http.StatusOK,
 		Data: user,
-		Gin: context,
+		Gin:  context,
 	})
 }

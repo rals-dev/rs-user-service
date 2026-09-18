@@ -33,6 +33,50 @@ user-service
 - copy .config.json.example to .config.json
 ```
 
+### Configuration notes
+
+- `signatureKey` and `jwtSecretKey` (config.json, or the equivalent Consul keys) are
+  required and must be at least 16 characters; the app now fails fast at startup
+  if either is missing or too short instead of silently signing/verifying with
+  an empty secret.
+- `allowedOrigins` (config.json) is the CORS allow-list of browser origins
+  permitted to call this API. There is no wildcard fallback: origins not in the
+  list receive no CORS headers, so browsers block the response. Configure this
+  explicitly per environment.
+- Consul-based config uses `CONSUL_HTTP_URL`, `CONSUL_HTTP_PATH`,
+  `CONSUL_HTTP_TOKEN` and `CONSUL_WATCH_INTERVAL_SECONDS` from `.env` /
+  environment variables (previously `CONSUL_HTTP_PATH` was read under a
+  mismatched name and never actually applied).
+- `TIMEZONE` (env var, see `.env.example`) controls the process-wide time
+  location; it defaults to `Asia/Jakarta` if unset.
+- Admin seeding is environment-driven and has no hardcoded default credential.
+  Set `ADMIN_USERNAME`, `ADMIN_PASSWORD` (min 8 chars), `ADMIN_EMAIL` and
+  `ADMIN_PHONE_NUMBER` to seed a development admin user; leave any of them
+  unset to skip seeding entirely (this is the required state in production).
+- `GET /api/v1/auth/:uuid` and `PUT /api/v1/auth/:uuid` are only permitted for
+  the JWT owner (matching UUID) or a caller with the `admin` role; anyone else
+  gets `403 Forbidden`.
+- Running via Docker without Consul: since the runtime image no longer bakes
+  in `config.json`, mount it explicitly, e.g. add
+  `- ./config.json:/app/config.json:ro` under `volumes:` in `docker-compose.yml`.
+
+### Follow-ups requiring an isolated/build environment
+
+The following could not be executed in this session (no build/test/DB access)
+and should be run in an isolated environment before merging:
+- `go mod tidy` (not run; no new dependencies were added, but this should still
+  be run to keep go.mod/go.sum tidy).
+- `go build ./...` and `go vet ./...` to confirm everything compiles.
+- Running the new unit tests (`go test ./...`).
+- Applying the `AutoMigrate`-driven unique constraints (`idx_users_uuid`,
+  `idx_users_username`, `idx_users_email`, `idx_roles_code`) against a
+  database that may already contain duplicate rows - resolve duplicates first
+  or the migration will fail.
+- Validating the updated `Jenkinsfile` (particularly the `sshUserPrivateKey`
+  credential binding and the still-commented `image:` line in
+  `docker-compose.yml`, which the "Update docker-compose.yml" stage assumes is
+  present and uncommented) against a real Jenkins environment.
+
 ## How to run
 
 ```bash
