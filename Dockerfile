@@ -1,29 +1,27 @@
-FROM golang:1.23.4-alpine3.21 as builder
+FROM golang:1.23.4-alpine3.21 AS builder
 
-RUN apk update
-RUN apk add git openssh tzdata build-base python3 net-tools
+RUN apk add --no-cache git tzdata build-base
 
 WORKDIR /app
 
-COPY .env.example .env
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
 
-RUN go install github.com/buu700/gin@latest
-RUN go mod tidy
+RUN CGO_ENABLED=0 go build -o /out/user-service .
 
-RUN make build
+FROM alpine:3.21
 
-FROM alpine:latest
-
-RUN apk update && apk upgrade && \
-    apk --update --no-cache add tzdata && \
-    apk --no-cache add curl && \
-    mkdir /app
+RUN apk add --no-cache ca-certificates tzdata && \
+    addgroup -S app && adduser -S app -G app
 
 WORKDIR /app
 
-EXPOSE 8001
+COPY --from=builder /out/user-service /app/user-service
 
-COPY --from=builder /app /app
+USER app
+
+EXPOSE 8001
 
 ENTRYPOINT [ "/app/user-service" ]

@@ -3,6 +3,9 @@ package error
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	errConstant "user-service/constants/error"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
 	"strings"
@@ -60,6 +63,32 @@ func ErrValidationResponse(err error) (validationResponse []ValidationResponse) 
 }
 
 func WrapError(err error) error {
-	logrus.Error("error %v", err)
+	logrus.Errorf("error: %v", err)
 	return err
+}
+
+// HTTPStatus maps a known application error to the HTTP status code that best
+// describes it, so handlers don't have to hardcode a single status (e.g. 400)
+// for every kind of failure returned by the service layer.
+func HTTPStatus(err error) int {
+	switch {
+	case err == nil:
+		return http.StatusOK
+	case errors.Is(err, errConstant.ErrUnauthorized):
+		return http.StatusUnauthorized
+	case errors.Is(err, errConstant.ErrForbidden):
+		return http.StatusForbidden
+	case errors.Is(err, errConstant.ErrUserNotFound), errors.Is(err, errConstant.ErrNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, errConstant.ErrRequestValidation):
+		return http.StatusUnprocessableEntity
+	case errors.Is(err, errConstant.ErrUserAlreadyExist),
+		errors.Is(err, errConstant.ErrEmailAlreadyExist),
+		errors.Is(err, errConstant.ErrUserNameExist):
+		return http.StatusConflict
+	case errors.Is(err, errConstant.ErrTooManyRequests):
+		return http.StatusTooManyRequests
+	default:
+		return http.StatusBadRequest
+	}
 }

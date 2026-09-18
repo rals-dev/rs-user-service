@@ -6,3 +6,7 @@ config.json
 
 .fleet
 .vscode
+
+# Debug binaries produced by `go build`/Delve (e.g. GoLand/dlv __debug_bin*)
+*.exe
+__debug_bin*
