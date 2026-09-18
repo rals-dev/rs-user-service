@@ -42,7 +42,7 @@ type UpdateRequest struct {
 	Name            string  `json:"name" validate:"required"`
 	Username        string  `json:"username" validate:"required"`
 	Password        *string `json:"password,omitempty" validate:"omitempty,min=8"`
-	ConfirmPassword *string `json:"confirmPassword,omitempty" validate:"omitempty,required_with=Password"`
+	ConfirmPassword *string `json:"confirmPassword,omitempty" validate:"required_with=Password"`
 	Email           string  `json:"email" validate:"required,email"`
 	PhoneNumber     string  `json:"phoneNumber" validate:"required"`
 }
